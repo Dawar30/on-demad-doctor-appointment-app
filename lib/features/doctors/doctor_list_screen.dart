@@ -39,7 +39,9 @@ class Doctor {
 //  DOCTOR LIST SCREEN
 // ============================================================
 class DoctorListScreen extends StatefulWidget {
-  const DoctorListScreen({super.key});
+  final ValueChanged<int> onTabChange;
+
+  const DoctorListScreen({super.key, required this.onTabChange});
 
   @override
   State<DoctorListScreen> createState() => _DoctorListScreenState();
@@ -66,7 +68,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => widget.onTabChange(0),
         ),
         title: const Text(
           'Doctors',
@@ -97,7 +99,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha((0.05 * 255).round()),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -126,7 +128,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _filters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (context, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 final isSelected = _selectedFilter == index;
                 return GestureDetector(
@@ -241,7 +243,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: doctors.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (context, index) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final doctor = doctors[index];
                     return Container(
@@ -250,7 +252,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withAlpha((0.05 * 255).round()),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),

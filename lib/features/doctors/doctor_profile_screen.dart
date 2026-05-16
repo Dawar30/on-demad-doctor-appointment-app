@@ -67,7 +67,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF1A6B8A).withOpacity(0.3),
+                              color: Color(0xFF1A6B8A).withAlpha((0.3 * 255).round()),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -139,7 +139,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withAlpha((0.05 * 255).round()),
                           blurRadius: 10,
                         ),
                       ],
@@ -184,7 +184,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withAlpha((0.04 * 255).round()),
                           blurRadius: 8,
                         ),
                       ],

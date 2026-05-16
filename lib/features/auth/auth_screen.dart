@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../main_screen.dart';
+// import '../../../main_screen.dart';
 
 // ============================================================
 //  COLORS
@@ -41,14 +41,14 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text.trim(),
         );
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const MainScreen(),
-            ),
-          );
-        }
+        // if (mounted) {
+        //   Navigator.push(
+        //     context,
+        //     MaterialPageRoute(
+        //       builder: (_) => const MainScreen(),
+        //     ),
+        //   );
+        // }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -393,7 +393,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withAlpha((0.06 * 255).round()),
                           blurRadius: 8,
                         ),
                       ],

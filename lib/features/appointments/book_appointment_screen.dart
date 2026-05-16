@@ -8,8 +8,15 @@ import '../doctors/doctor_list_screen.dart';
 // ============================================================
 class BookAppointmentScreen extends StatefulWidget {
   final Doctor doctor;
+  final String? rescheduleAppointmentId;
+  final String initialNotes;
 
-  const BookAppointmentScreen({super.key, required this.doctor});
+  const BookAppointmentScreen({
+    super.key,
+    required this.doctor,
+    this.rescheduleAppointmentId,
+    this.initialNotes = '',
+  });
 
   @override
   State<BookAppointmentScreen> createState() => _BookAppointmentScreenState();
@@ -46,7 +53,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   final List<String> _bookedSlots = ['09:30 AM', '11:00 AM', '01:30 PM'];
 
-  final TextEditingController _notesCtrl = TextEditingController();
+  late final TextEditingController _notesCtrl;
+
+  bool get _isReschedule => widget.rescheduleAppointmentId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesCtrl = TextEditingController(text: widget.initialNotes);
+  }
 
   @override
   void dispose() {
@@ -71,7 +86,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
-      await FirebaseFirestore.instance.collection('appointments').add({
+      final appointmentData = {
         'userId'    : user?.uid,
         'doctorName': widget.doctor.name,
         'specialty' : widget.doctor.specialty,
@@ -82,7 +97,16 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         'status'    : 'Upcoming',
         'notes'     : _notesCtrl.text,
         'createdAt' : FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (_isReschedule) {
+        await FirebaseFirestore.instance
+            .collection('appointments')
+            .doc(widget.rescheduleAppointmentId)
+            .update(appointmentData);
+      } else {
+        await FirebaseFirestore.instance.collection('appointments').add(appointmentData);
+      }
 
       setState(() => _isLoading = false);
 
@@ -111,8 +135,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Appointment Booked!',
+                  Text(
+                    _isReschedule ? 'Appointment Rescheduled!' : 'Appointment Booked!',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -121,7 +145,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Your appointment with ${widget.doctor.name} has been confirmed.',
+                    _isReschedule
+                        ? 'Your appointment with ${widget.doctor.name} has been updated.'
+                        : 'Your appointment with ${widget.doctor.name} has been confirmed.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 13,
@@ -146,8 +172,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Done',
+                      child: Text(
+                        _isReschedule ? 'Done' : 'Done',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
@@ -212,7 +238,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha((0.05 * 255).round()),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -292,7 +318,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _dates.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (context, index) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final isSelected = _selectedDateIndex == index;
                   return GestureDetector(
@@ -307,7 +333,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withAlpha((0.05 * 255).round()),
                             blurRadius: 6,
                           ),
                         ],
@@ -455,7 +481,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha((0.05 * 255).round()),
                     blurRadius: 8,
                   ),
                 ],
@@ -482,7 +508,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha((0.05 * 255).round()),
                     blurRadius: 8,
                   ),
                 ],
@@ -522,15 +548,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   ),
                   elevation: 2,
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Confirm Booking',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            _isReschedule ? 'Update Appointment' : 'Confirm Booking',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
               ),
             ),
 

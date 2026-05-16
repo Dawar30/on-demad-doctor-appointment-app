@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../doctors/doctor_list_screen.dart';
+import 'book_appointment_screen.dart';
+
 // ============================================================
 //  APPOINTMENT MODEL
 // ============================================================
@@ -13,6 +16,7 @@ class Appointment {
   final String time;
   final String type;
   final String status;
+  final String notes;
   final double? userRating;
 
   const Appointment({
@@ -23,6 +27,7 @@ class Appointment {
     required this.time,
     required this.type,
     required this.status,
+    required this.notes,
     this.userRating,
   });
 
@@ -36,6 +41,7 @@ class Appointment {
       time: data['time'] ?? '',
       type: data['type'] ?? '',
       status: data['status'] ?? 'Upcoming',
+      notes: data['notes'] ?? '',
       userRating: (data['userRating'] ?? 0).toDouble(),
     );
   }
@@ -45,7 +51,9 @@ class Appointment {
 //  APPOINTMENTS SCREEN
 // ============================================================
 class AppointmentsScreen extends StatefulWidget {
-  const AppointmentsScreen({super.key});
+  final ValueChanged<int> onTabChange;
+
+  const AppointmentsScreen({super.key, required this.onTabChange});
 
   @override
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
@@ -77,7 +85,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => widget.onTabChange(0),
         ),
         title: const Text(
           'My Appointments',
@@ -155,7 +163,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: appointments.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 14),
+          separatorBuilder: (context, index) => const SizedBox(height: 14),
           itemBuilder: (context, index) {
             return _AppointmentCard(appointment: appointments[index]);
           },
@@ -207,9 +215,57 @@ class _AppointmentCard extends StatelessWidget {
     }
   }
 
+  Future<void> _rescheduleAppointment(BuildContext context) async {
+    try {
+      final doctorSnapshot = await FirebaseFirestore.instance
+          .collection('doctors')
+          .where('name', isEqualTo: appointment.doctorName)
+          .limit(1)
+          .get();
+
+      if (doctorSnapshot.docs.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Doctor not found for rescheduling'),
+              backgroundColor: Color(0xFFE53E3E),
+            ),
+          );
+        }
+        return;
+      }
+
+      final doctor = Doctor.fromFirestore(doctorSnapshot.docs.first);
+
+      if (!context.mounted) {
+        return;
+      }
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookAppointmentScreen(
+            doctor: doctor,
+            rescheduleAppointmentId: appointment.id,
+            initialNotes: appointment.notes,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to open reschedule screen'),
+            backgroundColor: Color(0xFFE53E3E),
+          ),
+        );
+      }
+    }
+  }
+
   // ---- Rate Doctor Dialog ----
   void _showRatingDialog(BuildContext context) {
-    double _selectedRating = appointment.userRating ?? 0;
+    double selectedRating = appointment.userRating ?? 0;
 
     showDialog(
       context: context,
@@ -248,13 +304,13 @@ class _AppointmentCard extends StatelessWidget {
                     return GestureDetector(
                       onTap: () {
                         setDialogState(() {
-                          _selectedRating = index + 1.0;
+                          selectedRating = index + 1.0;
                         });
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(
-                          index < _selectedRating
+                          index < selectedRating
                               ? Icons.star_rounded
                               : Icons.star_outline_rounded,
                           color: const Color(0xFFF59E0B),
@@ -269,23 +325,23 @@ class _AppointmentCard extends StatelessWidget {
 
                 // Rating Text
                 Text(
-                  _selectedRating == 0
+                    selectedRating == 0
                       ? 'Tap a star to rate'
-                      : _selectedRating == 1
-                          ? 'Poor'
-                          : _selectedRating == 2
-                              ? 'Fair'
-                              : _selectedRating == 3
-                                  ? 'Good'
-                                  : _selectedRating == 4
-                                      ? 'Very Good'
-                                      : 'Excellent!',
+                      : selectedRating == 1
+                        ? 'Poor'
+                        : selectedRating == 2
+                          ? 'Fair'
+                          : selectedRating == 3
+                            ? 'Good'
+                            : selectedRating == 4
+                              ? 'Very Good'
+                              : 'Excellent!',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: _selectedRating == 0
-                        ? Colors.black38
-                        : const Color(0xFFF59E0B),
+                    color: selectedRating == 0
+                      ? Colors.black38
+                      : const Color(0xFFF59E0B),
                   ),
                 ),
 
@@ -295,14 +351,14 @@ class _AppointmentCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _selectedRating == 0
+                    onPressed: selectedRating == 0
                         ? null
                         : () async {
                             // Save rating to appointment
                             await FirebaseFirestore.instance
-                                .collection('appointments')
-                                .doc(appointment.id)
-                                .update({'userRating': _selectedRating});
+                              .collection('appointments')
+                              .doc(appointment.id)
+                              .update({'userRating': selectedRating});
 
                             // Update doctor average rating
                             final doctorQuery = await FirebaseFirestore
@@ -314,7 +370,7 @@ class _AppointmentCard extends StatelessWidget {
 
                             if (doctorQuery.docs.isNotEmpty) {
                               await doctorQuery.docs.first.reference
-                                  .update({'rating': _selectedRating});
+                                  .update({'rating': selectedRating});
                             }
 
                             if (context.mounted) {
@@ -362,7 +418,7 @@ class _AppointmentCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((0.05 * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -478,7 +534,7 @@ class _AppointmentCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () => _rescheduleAppointment(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A6B8A),
                       foregroundColor: Colors.white,
@@ -488,7 +544,7 @@ class _AppointmentCard extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Reschedule',
+                        'Reschedule',
                       style: TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 13),
                     ),

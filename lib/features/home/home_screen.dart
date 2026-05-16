@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import '../doctors/doctor_list_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../profile/user_profile_screen.dart';
 
 // ============================================================
 //  HOME SCREEN
 // ============================================================
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ValueChanged<int> onTabChange;
+
+  const HomeScreen({super.key, required this.onTabChange});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -61,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'Good Morning 👋',
+                        'Good Morning ',
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF6B7280),
@@ -78,17 +82,58 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A6B8A),
+                  PopupMenuButton<String>(
+                    tooltip: 'Account menu',
+                    offset: const Offset(0, 52),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
-                      Icons.person_outline,
-                      color: Colors.white,
-                      size: 24,
+                    onSelected: (value) async {
+                      if (value == 'profile') {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const UserProfileScreen(),
+                          ),
+                        );
+                      } else if (value == 'logout') {
+                        await FirebaseAuth.instance.signOut();
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem<String>(
+                        value: 'profile',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_outline, size: 20),
+                            SizedBox(width: 10),
+                            Text('Profile'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, size: 20),
+                            SizedBox(width: 10),
+                            Text('Logout'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A6B8A),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ],
@@ -99,12 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // ---- Search Bar ----
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DoctorListScreen(),
-                    ),
-                  );
+                  widget.onTabChange(1);
                 },
                 child: Container(
                   decoration: BoxDecoration(
@@ -112,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withAlpha((0.05 * 255).round()),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -182,12 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 12),
                           ElevatedButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const DoctorListScreen(),
-                                ),
-                              );
+                              widget.onTabChange(1);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -241,18 +276,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (context, index) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final isSelected = _selectedCategory == index;
                     return GestureDetector(
                       onTap: () {
                         setState(() => _selectedCategory = index);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DoctorListScreen(),
-                          ),
-                        );
+                        widget.onTabChange(1);
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -264,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withAlpha((0.05 * 255).round()),
                               blurRadius: 8,
                             ),
                           ],
@@ -314,14 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DoctorListScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => widget.onTabChange(1),
                     child: const Text(
                       'See All',
                       style: TextStyle(
@@ -341,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _doctors.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final doctor = _doctors[index];
                   return Container(
@@ -351,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withAlpha((0.05 * 255).round()),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -422,12 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Book Button
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DoctorListScreen(),
-                              ),
-                            );
+                            widget.onTabChange(1);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1A6B8A),

@@ -13,22 +13,35 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const DoctorListScreen(),
-    const AppointmentsScreen(),
-  ];
+  void _setTab(int index) {
+    if (index < 0 || index > 2) {
+      return;
+    }
+
+    if (_currentIndex == index) {
+      return;
+    }
+
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(onTabChange: _setTab),
+          DoctorListScreen(onTabChange: _setTab),
+          AppointmentsScreen(onTabChange: _setTab),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withAlpha((0.08 * 255).round()),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -36,7 +49,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: _setTab,
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF1A6B8A),
           unselectedItemColor: Colors.black38,
