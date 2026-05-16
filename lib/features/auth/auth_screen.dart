@@ -232,7 +232,7 @@ class RoleSelectionScreen extends StatelessWidget {
 //  LOGIN SCREEN
 // ============================================================
 class LoginScreen extends StatefulWidget {
-  final String role; // 'user' or 'doctor'
+  final String role;
   const LoginScreen({super.key, required this.role});
 
   @override
@@ -257,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordCtrl.text.trim(),
         );
 
-        // Check role in Firestore
+        // Firestore se role check karo
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(credential.user!.uid)
@@ -265,6 +265,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final userRole = userDoc.data()?['role'] ?? 'user';
 
+        // ---- Doctor Login Check ----
+        if (widget.role == 'doctor') {
+          // Sirf woh log login kar sakein jo doctor hain
+          if (userRole != 'doctor') {
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You are not registered as a doctor'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+            setState(() => _isLoading = false);
+            return;
+          }
+
+          // Doctor ka naam doctors collection mein check karo
+          final doctorQuery = await FirebaseFirestore.instance
+              .collection('doctors')
+              .where('name', isEqualTo: userDoc.data()?['name'])
+              .get();
+
+          if (doctorQuery.docs.isEmpty) {
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You are not registered in our doctors list'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+
+        // ---- User Login Check ----
+        if (widget.role == 'user' && userRole == 'doctor') {
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please login as a doctor instead'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // ---- Navigate ----
         if (mounted) {
           if (userRole == 'doctor') {
             Navigator.pushReplacement(
@@ -540,8 +594,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                SignupScreen(role: widget.role),
+                            builder: (_) => SignupScreen(role: widget.role),
                           ),
                         );
                       },
@@ -594,6 +647,30 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
+
+        // ---- Doctor Check ----
+        // Sirf woh doctor signup kar sakein jo doctors list mein hain
+        if (widget.role == 'doctor') {
+          final doctorQuery = await FirebaseFirestore.instance
+              .collection('doctors')
+              .where('name', isEqualTo: _nameCtrl.text.trim())
+              .get();
+
+          if (doctorQuery.docs.isEmpty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Your name is not in our doctors list. Please contact admin.'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+
         final credential = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(
           email: _emailCtrl.text.trim(),
@@ -624,7 +701,8 @@ class _SignupScreenState extends State<SignupScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Signup failed. Email already exists or try again.'),
+              content: Text(
+                  'Signup failed. Email already exists or try again.'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -697,9 +775,12 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 const SizedBox(height: 6),
 
-                const Text(
-                  'Fill in your details to get started',
-                  style: TextStyle(fontSize: 14, color: AppColors.textGrey),
+                Text(
+                  isDoctor
+                      ? 'Your name must match our doctors list'
+                      : 'Fill in your details to get started',
+                  style: const TextStyle(
+                      fontSize: 14, color: AppColors.textGrey),
                 ),
 
                 const SizedBox(height: 32),
@@ -891,8 +972,8 @@ class _SignupScreenState extends State<SignupScreen> {
                             : Icons.visibility_off_outlined,
                         color: AppColors.textGrey,
                       ),
-                      onPressed: () =>
-                          setState(() => _confirmVisible = !_confirmVisible),
+                      onPressed: () => setState(
+                          () => _confirmVisible = !_confirmVisible),
                     ),
                     filled: true,
                     fillColor: AppColors.white,

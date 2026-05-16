@@ -17,7 +17,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final String? _userId = FirebaseAuth.instance.currentUser?.uid;
-  String _doctorName = 'Doctor';
+  String _doctorName = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -33,7 +34,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen>
         .get();
     if (mounted && doc.exists) {
       setState(() {
-        _doctorName = doc.data()?['name'] ?? 'Doctor';
+        _doctorName = doc.data()?['name'] ?? '';
+        _isLoading = false;
       });
     }
   }
@@ -58,6 +60,15 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1A6B8A)),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
@@ -107,22 +118,30 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAppointmentsList('Upcoming'),
-          _buildAppointmentsList('Completed'),
-          _buildAppointmentsList('Cancelled'),
-        ],
-      ),
+      body: _doctorName.isEmpty
+          ? const Center(
+              child: Text(
+                'Doctor name not found',
+                style: TextStyle(color: Colors.black38),
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAppointmentsList('Upcoming'),
+                _buildAppointmentsList('Completed'),
+                _buildAppointmentsList('Cancelled'),
+              ],
+            ),
     );
   }
 
-  // ---- Appointments List ----
+  // ---- Appointments List — sirf is doctor ki ----
   Widget _buildAppointmentsList(String status) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('appointments')
+          .where('doctorName', isEqualTo: _doctorName)
           .where('status', isEqualTo: status)
           .snapshots(),
       builder: (context, snapshot) {
@@ -264,8 +283,8 @@ class _DoctorAppointmentCard extends StatelessWidget {
 
               // Status Badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: status == 'Upcoming'
                       ? const Color(0xFFE0F2F1)
@@ -297,8 +316,8 @@ class _DoctorAppointmentCard extends StatelessWidget {
           // ---- Date + Time + Type ----
           Row(
             children: [
-              _infoItem(Icons.calendar_today_outlined,
-                  data['date'] ?? ''),
+              _infoItem(
+                  Icons.calendar_today_outlined, data['date'] ?? ''),
               const SizedBox(width: 16),
               _infoItem(
                   Icons.access_time_outlined, data['time'] ?? ''),
